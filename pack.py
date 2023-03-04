@@ -33,11 +33,11 @@ def find_libs(kp, system):
 
   def get_names(path):
     if not os.path.isfile(path):
-      print('Warning: ' + path + ' doesn\'t exist. This is fine if that\'s a ' +
-        'system library that can expected to be found elsewhere.')
+      print((f'Warning: {path}' + ' doesn\'t exist. This is fine if that\'s a '
+             + 'system library that can expected to be found elsewhere.'))
       return None
 
-    libs = shell(ldd + ' ' + path)
+    libs = shell(f'{ldd} {path}')
     libs = [x for x in libs[starting_line:] if extension in x]
     libs = [x.split(' ')[0] for x in libs]
     libs = [x.split('/')[-1] for x in libs]
@@ -48,7 +48,7 @@ def find_libs(kp, system):
   while True:
     new_set = set()
     for lib in all_libs:
-      deps = get_names('third_party/lib/' + lib)
+      deps = get_names(f'third_party/lib/{lib}')
       if deps is None:
         not_found.add(lib)
       else:
@@ -70,26 +70,30 @@ def find_main_binary():
 
   matches = []
   for root, dirnames, filenames in os.walk('bin'):
-    for filename in fnmatch.filter(filenames, bin_name):
-      matches.append(os.path.join(root, filename))
-
+    matches.extend(
+        os.path.join(root, filename)
+        for filename in fnmatch.filter(filenames, bin_name))
   paths = [f.split(os.sep) for f in matches]
   release = [p for p in paths if p[-2] == 'release']
 
   if len(release) > 1:
     if len(sys.argv) < 2:
-      fatal('Error: You appear to have release targets built with more than one ' +
-        'toolset, please specify which you want to use as the first argument.\n' +
-        'We detected the following:\n' + '\n'.join(['  ' + p[1] for p in release]))
+      fatal((
+          'Error: You appear to have release targets built with more than one '
+          +
+          'toolset, please specify which you want to use as the first argument.\n'
+          + 'We detected the following:\n' + '\n'.join(
+              [f'  {p[1]}' for p in release])))
     else:
       release = [p for p in release if p[1].find(sys.argv[1]) == 0]
       if len(release) > 1:
-        fatal('The toolset name ' + sys.argv[1] + ' is ambiguous. It matches ' +
-          'the following:\n' + '\n'.join(['  ' + p[1] for p in release]))
-      elif len(release) == 0:
-        fatal('The toolset name ' + sys.argv[1] + ' does not match any folder ' +
-          'in ./bin, did you build the release target with that toolset?')
-  elif len(release) == 0:
+        fatal((f'The toolset name {sys.argv[1]} is ambiguous. It matches ' +
+               'the following:\n') + '\n'.join([f'  {p[1]}' for p in release]))
+      elif not release:
+        fatal(
+            f'The toolset name {sys.argv[1]} does not match any folder in ./bin, did you build the release target with that toolset?'
+        )
+  elif not release:
     fatal('Error: You don\'t seem to have a release target built. Build the ' +
       'release target with "./b2 release -j 8 --toolset=...\"')
 
@@ -98,7 +102,7 @@ def find_main_binary():
 def main():
   system = platform.system()
   supported_sys = ['Darwin', 'Linux', 'Windows']
-  if not system in supported_sys:
+  if system not in supported_sys:
     fatal('Error: Only the following platforms are supported:\n' +
       '\n'.join(supported_sys))
 
@@ -121,9 +125,7 @@ def main():
   #  shutil.copy(os.path.join('third_party', 'lib', lib), bin_dir)
 
   #files = [lib for lib in libs]
-  files = []
-  files.append('kinesis_producer' + ('.exe' if system == 'Windows' else ''))
-
+  files = ['kinesis_producer' + ('.exe' if system == 'Windows' else '')]
   #os.chdir(bin_dir)
   #with tarfile.open('bin.tar', 'w') as tar:
   #  for f in files:
